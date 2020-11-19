@@ -1,6 +1,8 @@
 /* eslint-disable */
 // This enables us to use TypeScript in the unit tests.
 require('ts-node/register');
+const HDWalletProvider = require("@truffle/hdwallet-provider");
+
 module.exports = {
   // this is required by truffle to find any ts test files
   test_file_extension_regexp: /.*\.ts$/,
@@ -47,13 +49,26 @@ module.exports = {
       skipDryRun: true,    // Skip dry run before migrations? (default: false for public nets )
       gasPrice: 7000000000  // 7 gwei (in wei) (default: 100 gwei)
     },
-    kovan: {
+    kovan_org: {
       provider: () => {
         return new HDWalletProvider(mnemonic, "https://kovan.infura.io/v3/ae145ebad7c8499db7901246fd1271f7");
       },
       network_id: 42,
       gas: 6700000,
       gasPrice: 10000000000
+    },
+    kovan: {      
+      network_id: 42,       // Kovan's id
+      chain_id: 42,
+      gas: 8000000,        // Ropsten has a lower block limit than mainnet
+      confirmations: 2,    // # of confs to wait between deployments. (default: 0)
+      timeoutBlocks: 2000,  // # of blocks before a deployment times out  (minimum/default: 50)
+      gasPrice: 7000000000,  // 7 gwei (in wei) (default: 100 gwei)
+      provider: () => new HDWalletProvider(
+        // 0x1Be31A94361a391bBaFB2a4CCd704F57dc04d4bb
+        "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        "https://kovan.infura.io/v3/4215ee18b34a444c85e9cd13dc88a8fd",
+      ),
     },
     ropsten: {
       provider: () => {
