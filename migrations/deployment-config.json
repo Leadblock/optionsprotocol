@@ -1,0 +1,21 @@
+{
+    "RINKEBY": {
+        "MULTISIG": "0x8c8b4C5caEAf1A6FB8308a6336932B3e3419704C",
+        "uniswapFactoryAddr": "0xf5D915570BC477f9B8D6C0E980aA81757A3AaC36",
+        "compoundOracleAddress": "0x332b6e69f21acdba5fb3e8dac56ff81878527e06"
+    },
+    "MAINNET": {
+        "MULTISIG": "",
+        "uniswapFactoryAddr": "0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95",
+        "compoundOracleAddress": "0x1D8aEdc9E924730DD3f9641CDb4D1B92B848b4bd"
+    },
+    "KOVAN": {
+        "uniswapFactoryAddr": "0xD3E51Ef092B2845f10401a0159B2B96e8B6c3D30",
+        "compoundOracleAddress": "0x6998ed7daf969ea0950e01071aceeee54cccbab5"
+    },
+    "ROPSTEN": {
+        "uniswapFactoryAddr": "0x0865A608E75FbD2ba087d08A5C7cAabcd977C1aD",
+        "compoundOracleAddress": "0xc7E20CF485b8E0Bcec3e2fCc23e3aD93b1b0cB39"
+    }
+
+}
