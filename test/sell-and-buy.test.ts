@@ -1,28 +1,35 @@
-/*import {expect} from 'chai';
+import { expect } from 'chai';
 import {
-  MockErc20Instance,
-  OTokenInstance,
+  ERC20MintableInstance,
+  oTokenInstance,
   OptionsFactoryInstance,
   OptionsExchangeInstance,
   UniswapFactoryInterfaceInstance,
   UniswapExchangeInterfaceInstance,
   CompoundOracleInterfaceInstance,
-  MockOracleInstance,
+  MockCompoundOracleInstance,
   OracleInstance
 } from '../build/types/truffle-types';
-import {Address} from 'cluster';
+import { Address } from 'cluster';
 
 const OptionsFactory = artifacts.require('OptionsFactory');
-const MockERC20 = artifacts.require('MockERC20');
+const MintableToken = artifacts.require('ERC20Mintable');
 const UniswapFactory = artifacts.require('UniswapFactoryInterface');
 const UniswapExchange = artifacts.require('UniswapExchangeInterface');
 const OptionsExchange = artifacts.require('OptionsExchange.sol');
 const oToken = artifacts.require('oToken');
-// const Oracle = artifacts.require('Oracle.sol');
-const Oracle = artifacts.require('MockOracle');
+const Oracle = artifacts.require('Oracle.sol');
+// const Oracle = artifacts.require('MockCompoundOracle');
 
 // Egs. collateral = 200 * 10^-18, strikePrice = 9 * 10^-15.
 // returns number of oTokens
+function calculateMaxOptionsToCreate(
+  collateral: number,
+  strikePrice: number,
+  collateralToStrikePrice: number
+): number {
+  return Math.floor((collateral * collateralToStrikePrice) / (2 * strikePrice));
+}
 
 // Egs. oTokensSold = 200 * 10^15, strikePrice = 9 * 10^-15, apr = 2, strikeToCol = 0.01
 // returns collateral to deposit (in wei).
@@ -42,10 +49,6 @@ contract('OptionsContract', accounts => {
   const firstRepoOwnerAddress = accounts[1];
   const secondRepoOwnerAddress = accounts[2];
 
-  // Amount of ETH to put down as collateral in Wei.
-  const ETHCollateralForOcDai = '7000000000000000000';
-  const ETHCollateralForOcUSDC = '7000000000000000000';
-
   let daiAddress: string;
   let usdcAddress: string;
   let cUSDCAddress: string;
@@ -57,14 +60,13 @@ contract('OptionsContract', accounts => {
   let optionsContractAddresses: string[];
   let oracleAddress: string;
 
-  const optionsContracts: OTokenInstance[] = [];
+  const optionsContracts: oTokenInstance[] = [];
   let optionsFactory: OptionsFactoryInstance;
-  let dai: MockErc20Instance;
-  let usdc: MockErc20Instance;
+  let dai: ERC20MintableInstance;
+  let usdc: ERC20MintableInstance;
   let uniswapFactory: UniswapFactoryInterfaceInstance;
   let optionsExchange: OptionsExchangeInstance;
   let oracle: OracleInstance;
-  // let oracle: MockOracleInstance
 
   const windowSize = 1612915200;
   const contractsDeployed = true;
@@ -111,67 +113,67 @@ contract('OptionsContract', accounts => {
       optionsExchangeAddress = '0x5778f2824a114F6115dc74d432685d3336216017';
       optionsFactoryAddress = '0xb529964F86fbf99a6aA67f72a27e59fA3fa4FEaC';
       optionsContractAddresses = [
-        // '0xddaC4AED7c8F73032b388EFe2c778FC194BC81ed',
-        '0x98CC3BD6Af1880fcfDa17ac477B2F612980e5e33'
-        // '0x8ED9f862363fFdFD3a07546e618214b6D59F03d4'
+        '0xddaC4AED7c8F73032b388EFe2c778FC194BC81ed',
+        '0x8ED9f862363fFdFD3a07546e618214b6D59F03d4'
       ];
       oracleAddress = '0x7054e08461e3eCb7718B63540adDB3c3A1746415';
     }
     if (!contractsDeployed) {
       oracle = await Oracle.deployed();
       // 1.2 Mock Dai contract
-      dai = await MockERC20.at(daiAddress);
+      dai = await MintableToken.at(daiAddress);
       // 1.3 USDC contract
-      usdc = await MockERC20.at(usdcAddress);
+      usdc = await MintableToken.at(usdcAddress);
 
       // 2. Deploy our contracts
       // Deploy the Options Exchange
       optionsExchange = await OptionsExchange.deployed();
+
       // Deploy the Options Factory contract and add assets to it
       optionsFactory = await OptionsFactory.deployed();
 
-      // await optionsFactory.updateAsset('DAI', dai.address);
-      // await optionsFactory.updateAsset('USDC', usdc.address);
-      // await optionsFactory.updateAsset('cDAI', cDaiAddress);
-      // await optionsFactory.updateAsset('cUSDC', cUSDCAddress);
+      // await optionsFactory.addAsset('DAI', dai.address);
+      await optionsFactory.addAsset('USDC', usdc.address);
+      await optionsFactory.addAsset('cDAI', cDaiAddress);
+      await optionsFactory.addAsset('cUSDC', cUSDCAddress);
 
       // Create the unexpired options contract
-      const optionsContractResult = await optionsFactory.createOptionsContract(
+      let optionsContractResult = await optionsFactory.createOptionsContract(
         'ETH',
         -'18',
         'cDAI',
         -'8',
         -'8',
-        '1859',
-        -'13',
+        '2',
+        -'10',
         'USDC',
         '1612915200',
         windowSize,
-        {from: creatorAddress}
+        { from: creatorAddress, gas: '4000000' }
       );
 
-      const optionsContractAddr = optionsContractResult.logs[1].args[0];
+      let optionsContractAddr = optionsContractResult.logs[1].args[0];
       optionsContracts.push(await oToken.at(optionsContractAddr));
 
       // Create the unexpired options contract
-      // optionsContractResult = await optionsFactory.createOptionsContract(
-      //   'ETH',
-      //   -'18',
-      //   'cUSDC',
-      //   -'8',
-      //   -'8',
-      //   '208',
-      //   -'12',
-      //   'USDC',
-      //   '1612915200',
-      //   windowSize,
-      //   {from: creatorAddress}
-      // );
+      optionsContractResult = await optionsFactory.createOptionsContract(
+        'ETH',
+        -'18',
+        'cUSDC',
+        -'8',
+        -'8',
+        '208',
+        -'12',
+        'USDC',
+        '1612915200',
+        windowSize,
+        { from: creatorAddress, gas: '4000000' }
+      );
 
-      // optionsContractAddr = optionsContractResult.logs[1].args[0];
-      // optionsContracts.push(await oToken.at(optionsContractAddr));
+      optionsContractAddr = optionsContractResult.logs[1].args[0];
+      optionsContracts.push(await oToken.at(optionsContractAddr));
 
-      console.log('Options Exchange ' + optionsExchange.address);
+      console.log('Options Exchange ' + OptionsExchange.address);
       console.log('Options Factory ' + optionsFactory.address);
       console.log('ocDai ' + optionsContracts[0].address);
       console.log('ocUSDC ' + optionsContracts[1].address);
@@ -180,7 +182,7 @@ contract('OptionsContract', accounts => {
     } else {
       optionsFactory = await OptionsFactory.at(optionsFactoryAddress);
       optionsContracts.push(await oToken.at(optionsContractAddresses[0]));
-      // optionsContracts.push(await oToken.at(optionsContractAddresses[1]));
+      optionsContracts.push(await oToken.at(optionsContractAddresses[1]));
       // optionsContracts.push(await oToken.at(optionsContractAddresses[2]));
       optionsExchange = await OptionsExchange.at(optionsExchangeAddress);
       oracle = await Oracle.at(oracleAddress);
@@ -195,8 +197,8 @@ contract('OptionsContract', accounts => {
       // if(!contractsDeployed) {
       let i;
       const details = [
-        {name: 'Opyn cDai Insurance', symbol: 'ocDai'},
-        {name: 'Opyn cUSDC Insurance', symbol: 'ocUSDC'}
+        { name: 'Opyn cDai Insurance', symbol: 'ocDai' },
+        { name: 'Opyn cUSDC Insurance', symbol: 'ocUSDC' }
       ];
       for (i = 0; i < optionsContracts.length; i++) {
         optionsContracts[i].setDetails(details[i].name, details[i].symbol);
@@ -206,7 +208,7 @@ contract('OptionsContract', accounts => {
   });
 
   describe('add liquidity on uniswap', () => {
-    xit('create the uniswap exchange', async () => {
+    it('create the uniswap exchange', async () => {
       if (!contractsDeployed) {
         let i;
         for (i = 0; i < optionsContracts.length; i++) {
@@ -216,9 +218,80 @@ contract('OptionsContract', accounts => {
     });
 
     it('should be able to create oTokens', async () => {
-      // if (!contractsDeployed) {
-      const collateral = '2000000000000000';
-      const strikePrices = [1859 * 10 ** -13, 208 * 10 ** -12, 9 * 10 ** -15];
+      if (!contractsDeployed) {
+        const collateral = '2000000000000000';
+        const strikePrices = [2 * 10 ** -10, 208 * 10 ** -12, 9 * 10 ** -15];
+        const ETHToUSDCPrice =
+          10 ** 18 / Number(await oracle.getPrice(usdcAddress));
+        for (let i = 0; i < optionsContracts.length; i++) {
+          const numOptions = (
+            calculateMaxOptionsToCreate(
+              Number(collateral) * 10 ** -18,
+              strikePrices[i],
+              ETHToUSDCPrice
+            ) - 10000
+          ).toString();
+          const result = await optionsContracts[i].createETHCollateralOption(
+            numOptions,
+            creatorAddress,
+            {
+              from: creatorAddress,
+              value: collateral
+            }
+          );
+
+          // Minting oTokens should emit an event correctly
+          expect(result.logs[3].event).to.equal('IssuedOTokens');
+          expect(result.logs[3].args.issuedTo).to.equal(creatorAddress);
+        }
+      }
+    });
+
+    it('should be able to add liquidity to Uniswap', async () => {
+      if (!contractsDeployed) {
+        const strikePrices = [2 * 10 ** -10, 208 * 10 ** -12, 9 * 10 ** -15];
+        const apr = [2, 1];
+        const USDCToETHPrice =
+          Number(await oracle.getPrice(usdcAddress)) / 10 ** 18;
+
+        for (let i = 0; i < optionsContracts.length; i++) {
+          const uniswapExchangeAddr = await uniswapFactory.getExchange(
+            optionsContracts[i].address
+          );
+
+          const uniswapExchange = await UniswapExchange.at(uniswapExchangeAddr);
+          await optionsContracts[i].approve(
+            uniswapExchangeAddr,
+            '100000000000000000000000000000'
+          );
+
+          const oTokens = (
+            await optionsContracts[i].balanceOf(creatorAddress)
+          ).toString();
+          const collateral = calculateETHInUniswapPool(
+            Number(oTokens),
+            strikePrices[i],
+            apr[i],
+            USDCToETHPrice
+          ).toString();
+          // assuming 1 * 10^-15 USD per oDai, 1000 * oDai * USD-ETH
+          // the minimum value of ETH is 1000000000
+          await uniswapExchange.addLiquidity(
+            '1',
+            oTokens,
+            '1000000000000000000000000',
+            {
+              from: creatorAddress,
+              value: collateral
+            }
+          );
+        }
+      }
+    });
+
+    xit('should be able to create more liquidity', async () => {
+      const collateral = '200000000000000';
+      const strikePrices = [2 * 10 ** -10, 208 * 10 ** -12, 9 * 10 ** -15];
       const ETHToUSDCPrice =
         10 ** 18 / Number(await oracle.getPrice(usdcAddress));
       for (let i = 0; i < optionsContracts.length; i++) {
@@ -229,7 +302,7 @@ contract('OptionsContract', accounts => {
             ETHToUSDCPrice
           ) - 10000
         ).toString();
-        const result = await optionsContracts[i].createETHCollateralOption(
+        await optionsContracts[i].addETHCollateralOption(
           numOptions,
           creatorAddress,
           {
@@ -237,88 +310,6 @@ contract('OptionsContract', accounts => {
             value: collateral
           }
         );
-
-        // Minting oTokens should emit an event correctly
-        expect(result.logs[3].event).to.equal('IssuedOTokens');
-        expect(result.logs[3].args.issuedTo).to.equal(creatorAddress);
-      }
-      // }
-    });
-
-    it('should be able to add liquidity to Uniswap', async () => {
-      // if (!contractsDeployed) {
-      const strikePrices = [1859 * 10 ** -13, 208 * 10 ** -12, 9 * 10 ** -15];
-      const apr = [2, 1];
-      const USDCToETHPrice =
-        Number(await oracle.getPrice(usdcAddress)) / 10 ** 18;
-
-      for (let i = 0; i < optionsContracts.length; i++) {
-        const uniswapExchangeAddr = await uniswapFactory.getExchange(
-          optionsContracts[i].address
-        );
-
-        const uniswapExchange = await UniswapExchange.at(uniswapExchangeAddr);
-        await optionsContracts[i].approve(
-          uniswapExchangeAddr,
-          '100000000000000000000000000000'
-        );
-
-        const oTokens = (
-          await optionsContracts[i].balanceOf(creatorAddress)
-        ).toString();
-        const collateral = calculateETHInUniswapPool(
-          Number(oTokens),
-          strikePrices[i],
-          apr[i],
-          USDCToETHPrice
-        ).toString();
-        // assuming 1 * 10^-15 USD per oDai, 1000 * oDai * USD-ETH
-        // the minimum value of ETH is 1000000000
-        await uniswapExchange.addLiquidity(
-          '1',
-          oTokens,
-          '1000000000000000000000000',
-          {
-            from: creatorAddress,
-            value: collateral
-          }
-        );
-      }
-      // }
-    });
-
-    xit('should be able to create more oToken liquidity', async () => {
-      const collateral = [ETHCollateralForOcDai, ETHCollateralForOcUSDC];
-      const strikePrices = [2 * 10 ** -10, 208 * 10 ** -12, 9 * 10 ** -15];
-      const ETHToUSDCPrice =
-        10 ** 18 / Number(await oracle.getPrice(usdcAddress));
-      for (let i = 0; i < optionsContracts.length; i++) {
-        const numOptions = (
-          calculateMaxOptionsToCreate(
-            Number(collateral[i]) * 10 ** -18,
-            strikePrices[i],
-            ETHToUSDCPrice
-          ) - 10000
-        ).toString();
-        if (Boolean(await optionsContracts[i].hasVault(creatorAddress))) {
-          await optionsContracts[i].addETHCollateralOption(
-            numOptions,
-            creatorAddress,
-            {
-              from: creatorAddress,
-              value: collateral[i].toString()
-            }
-          );
-        } else {
-          await optionsContracts[i].createETHCollateralOption(
-            numOptions,
-            creatorAddress,
-            {
-              from: creatorAddress,
-              value: collateral[i].toString()
-            }
-          );
-        }
       }
     });
 
@@ -335,7 +326,6 @@ contract('OptionsContract', accounts => {
           '0x0000000000000000000000000000000000000000',
           '1'
         );
-        console.log(premiumToPay.toString());
         const insuredAPR =
           ((Number(premiumToPay) * 10 ** -18) / priceInUSD[i]) *
           100 *
@@ -370,6 +360,7 @@ contract('OptionsContract', accounts => {
       // const newPrice = Math.floor((1 / newETHToUSDPrice) * 10 ** 18).toString();
       // await oracle.updatePrice(newPrice, {
       //   from: creatorAddress,
+      //   gas: '1000000'
       // });
       // const result = await optionsContracts[0].isUnsafe(creatorAddress);
       // expect(result).to.be.true;
@@ -434,7 +425,7 @@ contract('OptionsContract', accounts => {
 
     xit('should be able to buy oTokens with ERC20s', async () => {
       const paymentTokenAddr = '0x2448eE2641d78CC42D7AD76498917359D961A783';
-      const paymentToken = await MockERC20.at(paymentTokenAddr);
+      const paymentToken = await MintableToken.at(paymentTokenAddr);
       // set to optionsCotnracs[0].address
       const oTokenAddress = optionsContractAddresses[0];
       await paymentToken.approve(
@@ -461,4 +452,3 @@ contract('OptionsContract', accounts => {
     });
   });
 });
-*/
