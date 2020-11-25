@@ -6,7 +6,6 @@ import "../packages/SafeMath.sol";
 import "../interfaces/CTokenInterface.sol";
 import "../packages/ERC20Detailed.sol";
 
-
 contract MockCompoundOracle is CompoundOracleInterface {
     using SafeMath for uint256;
     mapping(string => uint256) private prices;
@@ -29,23 +28,38 @@ contract MockCompoundOracle is CompoundOracleInterface {
     address internal wbtc;
     address internal zrx;
 
+    address internal mkr;
+    address internal uni;
+    address internal weth;
+
     constructor() public {
-        cEth = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
-        cBat = 0x6C8c6b02E7b2BE14d4fA6022Dfd6d75921D90E4E;
-        cDai = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643;
-        cRep = 0x158079Ee67Fce2f58472A96584A73C7Ab9AC95c1;
-        cUsdc = 0x39AA39c021dfbaE8faC545936693aC917d5E7563;
-        cWbtc = 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4;
-        cZrx = 0xB3319f5D18Bc0D84dD1b4825Dcde5d5f7266d407;
+        // cEth = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
+        // cBat = 0x6C8c6b02E7b2BE14d4fA6022Dfd6d75921D90E4E;
+        // cDai = 0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643;
+        // cRep = 0x158079Ee67Fce2f58472A96584A73C7Ab9AC95c1;
+        // cUsdc = 0x39AA39c021dfbaE8faC545936693aC917d5E7563;
+        // cWbtc = 0xC11b1268C1A384e55C48c2391d8d480264A3A7F4;
+        // cZrx = 0xB3319f5D18Bc0D84dD1b4825Dcde5d5f7266d407;
 
-        bat = 0x0D8775F648430679A709E98d2b0Cb6250d2887EF;
-        dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-        rep = 0x1985365e9f78359a9B6AD760e32412f4a445E862;
-        usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-        wbtc = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
-        zrx = 0xE41d2489571d322189246DaFA5ebDe1F4699F498;
+        // bat = 0x0D8775F648430679A709E98d2b0Cb6250d2887EF;
+        // dai = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+        // rep = 0x1985365e9f78359a9B6AD760e32412f4a445E862;
+        // usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+        // wbtc = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+        // zrx = 0xE41d2489571d322189246DaFA5ebDe1F4699F498;
 
-        prices["ETH"] = 337.86 * 1e6;
+        // prices["ETH"] = 337.86 * 1e6;
+
+        // modify for kovan testnet
+        prices["ETH"] = 588.86 * 1e6;
+
+        // https://gateway.ipfs.io/ipns/tokens.uniswap.org
+        dai = 0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa;
+        mkr = 0xAaF64BFCC32d0F15873a02163e7E500671a4ffcD;
+        uni = 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984;
+        weth = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
+
+        usdc = 0xcfC9bB230F00bFFDB560fCe2428b4E05F3442E35;
     }
 
     /**
